@@ -1,10 +1,10 @@
 import express from "express";
-import registerUser from "../controllers/authController.js";
+import {registerUser,loginUser} from "../controllers/authController.js";
 
-const router = express.Router();
+const router = express.Router()
 
 router.post("/register", registerUser);
-// router.post("/login");
+router.post("/login", loginUser);
 // router.post("/forgot-password");
 // router.post("/reset-password");
 // router.post("/logout");

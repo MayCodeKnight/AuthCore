@@ -1,6 +1,10 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const findUserByEmail = async (email) =>{
     const result = await pool.query(`SELECT * FROM users WHERE email= $1`,[email]);
@@ -31,4 +35,26 @@ export const registerUser = async (name, email, password) => {
     );
 
     return result.rows[0];
+};
+
+export const loginUser = async (email, password) =>{
+    const user = await findUserByEmail(email);
+    if(!user){
+        throw new AppError("Invalid email or password",401);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password,user.password_hash);
+    if(!isPasswordValid){
+        throw new AppError("Invalid email or password",401);
+    }
+
+    const userToken = jwt.sign({
+        sub: user.id,
+        role: user.role,},
+    process.env.JWT_SECRET,
+    {expiresIn: "15m",});
+
+    return {
+        token: userToken
+    };
 };
