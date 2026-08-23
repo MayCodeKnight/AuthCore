@@ -28,3 +28,12 @@ export const updateUser = async(id,name,email) =>{
         }
         return result.rows[0] || null;
 };
+
+export const deleteUser = async (id) => {
+    const result = await pool.query(
+        `DELETE FROM users WHERE id = $1 RETURNING id`,
+        [id]
+    );
+
+    return result.rows[0] || null;
+};
