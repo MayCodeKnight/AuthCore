@@ -1,4 +1,4 @@
-import { registerUser as registerUserService, loginUser as loginUserService } from "../services/authService.js";
+import { registerUser as registerUserService, loginUser as loginUserService ,forgotPassword as forgotPasswordService,resetPassword as resetPasswordService} from "../services/authService.js";
 import AppError from "../utils/AppError.js";
 
 export const registerUser = async (req, res) => {
@@ -21,4 +21,36 @@ export const loginUser = async (req, res) =>{
     const token = await loginUserService(email, password);
 
     res.status(200).json(token);
+};
+
+export const forgotPassword = async (req,res) =>{
+    const {email} = req.body;
+
+    if(!email){
+        throw new AppError("Email is required", 400);
+    }
+
+    await forgotPasswordService(email);
+
+    res.status(200).json(
+    {
+      message: "If an account exists with that email, a password reset link has been sent."
+    }
+    )
+};
+
+export const resetPassword = async (req,res) =>{
+    const {token, newPassword} = req.body;
+
+    if(!token || !newPassword){
+        throw new AppError("Token and new password are required", 400);
+    }
+
+    await resetPasswordService(token, newPassword);
+
+    res.status(200).json(
+    {
+      message: "Password has been reset successfully."
+    }
+    )
 };

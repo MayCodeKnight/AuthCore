@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import crypto from "crypto";
+import {saveResetToken,resetUserPassword,findUserByResetToken} from "./userService.js";
 
 dotenv.config();
 
@@ -57,4 +59,53 @@ export const loginUser = async (email, password) =>{
     return {
         token: userToken
     };
+};
+
+export const generateResetToken = () =>{
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    const expiresAt = new Date(Date.now()+15*60*1000);
+
+    return {
+        resetToken,
+        hashedToken,
+        expiresAt
+    };
+} 
+
+export const forgotPassword = async (email) =>{
+    const user = await findUserByEmail(email);
+
+    if(!user){
+        return;
+    }
+
+    const {resetToken, hashedToken, expiresAt} = generateResetToken();
+
+    const isSaved = await saveResetToken(user.id, hashedToken, expiresAt);
+
+    if(!isSaved){
+        throw new AppError("Failed to save reset token",500);
+    }
+    return resetToken;
+};
+
+export const resetPassword = async (token,newPassword) =>{
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await findUserByResetToken(hashedToken);
+
+    if(!user){
+        throw new AppError("Invalid or expired reset token",400);
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    const isUpdated = await resetUserPassword(user.id,hashedPassword);
+
+    if(!isUpdated){
+        throw new AppError("Failed to reset password",500);
+    }
 };

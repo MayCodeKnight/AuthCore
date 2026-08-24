@@ -48,3 +48,42 @@ export const updateUserRole = async (id, role) => {
     );
     return result.rows[0] || null;
 };
+
+export const saveResetToken = async (userId, hashedToken, expiresAt) => {
+    const result = await pool.query(
+        `UPDATE users
+         SET reset_token_hash = $1,
+             reset_token_expires_at = $2
+         WHERE id = $3`,
+        [hashedToken, expiresAt, userId]
+    );
+
+    return result.rowCount > 0;
+};
+
+export const findUserByResetToken = async (hashedToken) => {
+    const result = await pool.query(
+        `SELECT id
+         FROM users
+         WHERE reset_token_hash = $1
+         AND reset_token_expires_at > CURRENT_TIMESTAMP`,
+        [hashedToken]
+    );
+
+    return result.rows[0] || null;
+};
+
+
+export const resetUserPassword = async (userId, passwordHash) => {
+    const result = await pool.query(
+        `UPDATE users
+         SET password_hash = $1,
+             reset_token_hash = NULL,
+             reset_token_expires_at = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [passwordHash, userId]
+    );
+
+    return result.rowCount > 0;
+};
