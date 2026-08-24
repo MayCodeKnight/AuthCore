@@ -1,4 +1,4 @@
-import { registerUser as registerUserService, loginUser as loginUserService ,forgotPassword as forgotPasswordService,resetPassword as resetPasswordService} from "../services/authService.js";
+import { registerUser as registerUserService,loginUser as loginUserService,forgotPassword as forgotPasswordService,resetPassword as resetPasswordService,refreshAccessToken as refreshAccessTokenService,logoutUser as logoutUserService} from "../services/authService.js";
 import AppError from "../utils/AppError.js";
 
 export const registerUser = async (req, res) => {
@@ -51,6 +51,34 @@ export const resetPassword = async (req,res) =>{
     res.status(200).json(
     {
       message: "Password has been reset successfully."
+    }
+    )
+};
+
+export const refreshAccessToken = async (req,res) =>{
+    const {refreshToken} = req.body;
+
+    if(!refreshToken){
+        throw new AppError("Refresh token is required", 400);
+    }
+
+    const result = await refreshAccessTokenService(refreshToken);
+
+    res.status(200).json(result);
+};
+
+export const logoutUser = async (req,res) =>{
+    const {refreshToken} = req.body;
+
+    if(!refreshToken){
+        throw new AppError("Refresh token is required", 400);
+    }
+
+    await logoutUserService(refreshToken);
+
+    res.status(200).json(
+    {
+      message: "Logged out successfully."
     }
     )
 };

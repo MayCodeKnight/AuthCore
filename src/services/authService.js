@@ -4,7 +4,7 @@ import AppError from "../utils/AppError.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import crypto from "crypto";
-import {saveResetToken,resetUserPassword,findUserByResetToken} from "./userService.js";
+import {saveResetToken,resetUserPassword,findUserByResetToken,saveRefreshToken,findRefreshToken,findUserById,revokeRefreshToken} from "./userService.js";
 
 dotenv.config();
 
@@ -50,14 +50,23 @@ export const loginUser = async (email, password) =>{
         throw new AppError("Invalid email or password",401);
     }
 
-    const userToken = jwt.sign({
+    const accessToken = jwt.sign({
         sub: user.id,
         role: user.role,},
     process.env.JWT_SECRET,
     {expiresIn: "15m",});
 
+    const {refreshToken, tokenHash, expiresAt} = generateRefreshToken();
+
+    const isSaved = await saveRefreshToken(user.id, tokenHash, expiresAt);
+
+    if (!isSaved) {
+        throw new AppError("Failed to create refresh session", 500);
+    }
+
     return {
-        token: userToken
+        accessToken,
+        refreshToken
     };
 };
 
@@ -107,5 +116,64 @@ export const resetPassword = async (token,newPassword) =>{
 
     if(!isUpdated){
         throw new AppError("Failed to reset password",500);
+    }
+};
+
+
+export const generateRefreshToken = () =>{
+    const refreshToken = crypto.randomBytes(32).toString("hex");
+
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const expiresAt = new Date(Date.now()+7*24*60*60*1000);
+
+    return {
+        refreshToken,
+        tokenHash,
+        expiresAt
+    };
+};
+
+export const refreshAccessToken = async (refreshToken) =>{
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const storedToken = await findRefreshToken(tokenHash);
+
+    if(
+        !storedToken ||
+        storedToken.revoked_at !== null ||
+        new Date(storedToken.expires_at) <= new Date()
+    ){
+        throw new AppError("Invalid refresh token",401);
+    }
+    
+    const user = await findUserById(storedToken.user_id);
+
+    if (!user) {
+        throw new AppError("Invalid refresh token", 401);
+    }
+
+    const accessToken = jwt.sign(
+        {
+            sub: user.id,
+            role: user.role
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "15m"
+        }
+    );
+    return {
+        accessToken
+    };
+};
+
+export const logoutUser = async (refreshToken) =>{
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const isRevoked = await revokeRefreshToken(tokenHash);
+
+    if(!isRevoked){
+        throw new AppError("Invalid refresh token",401);
     }
 };
