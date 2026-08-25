@@ -2,11 +2,11 @@ import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 import crypto from "crypto";
 import {saveResetToken,resetUserPassword,findUserByResetToken,saveRefreshToken,findRefreshToken,findUserById,revokeRefreshToken,revokeAllRefreshTokens,rotateRefreshToken} from "./userService.js";
 
-dotenv.config();
+// dotenv.config();
 
 export const findUserByEmail = async (email) =>{
     const result = await pool.query(`SELECT * FROM users WHERE email= $1`,[email]);
