@@ -1,13 +1,49 @@
 import { registerUser as registerUserService,loginUser as loginUserService,forgotPassword as forgotPasswordService,resetPassword as resetPasswordService,refreshAccessToken as refreshAccessTokenService,logoutUser as logoutUserService} from "../services/authService.js";
+import {isValidEmail,isValidPassword} from "../utils/validation.js";
 import AppError from "../utils/AppError.js";
 
 export const registerUser = async (req, res) => {
     const { name, email, password } = req.body;
+
     if(!name || !email || !password){
         throw new AppError("Name, email and password are required", 400);
     }
 
-    const user = await registerUserService(name, email, password);
+    if (typeof name !== "string") {
+        throw new AppError("Name must be a string", 400);
+    }
+
+    const normalizedName = name.trim();
+
+    if (normalizedName.length < 2 || normalizedName.length > 100) {
+        throw new AppError(
+            "Name must be between 2 and 100 characters long",
+            400
+        );
+    }
+
+    if (typeof email !== "string") {
+        throw new AppError("Email must be a string", 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+        throw new AppError("Invalid email format", 400);
+    }
+
+    if (!isValidPassword(password)) {
+        throw new AppError(
+            "Password must be at least 8 characters long",
+            400
+        );
+    }
+
+    const user = await registerUserService(
+        normalizedName,
+        normalizedEmail,
+        password
+    );
 
     res.status(201).json(user);
 };

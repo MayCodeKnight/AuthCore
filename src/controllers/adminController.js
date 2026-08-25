@@ -20,19 +20,43 @@ export const getUserById = async (req,res) =>{
     });
 };
 
-export const getupdateUserRole = async (req,res) =>{
+export const getupdateUserRole = async (req, res) => {
     const userId = req.params.id;
-    const role=req.body.role;
+    const body = req.body;
 
-    if(!role || (role !== "user" && role !== "admin")){
-        throw new AppError("Invalid role. Role must be either 'user' or 'admin'",400);
+    const providedFields = Object.keys(body);
+
+    if (providedFields.length === 0) {
+        throw new AppError("Role is required", 400);
     }
 
-    const updatedUser = await updateUserRole(userId,role);
+    const hasInvalidField = providedFields.some(
+        (field) => field !== "role"
+    );
 
-    if(!updatedUser){
-        throw new AppError("User not found",404);
+    if (hasInvalidField) {
+        throw new AppError("Only role can be updated", 400);
     }
+
+    const { role } = body;
+
+    if (typeof role !== "string") {
+        throw new AppError("Role must be a string", 400);
+    }
+
+    if (role !== "user" && role !== "admin") {
+        throw new AppError(
+            "Invalid role. Role must be either 'user' or 'admin'",
+            400
+        );
+    }
+
+    const updatedUser = await updateUserRole(userId, role);
+
+    if (!updatedUser) {
+        throw new AppError("User not found", 404);
+    }
+
     res.json({
         user: updatedUser
     });
@@ -40,6 +64,13 @@ export const getupdateUserRole = async (req,res) =>{
 
 export const deleteUserByAdmin = async (req,res) =>{
     const userId = req.params.id;
+
+    if (Number(userId) === Number(req.user.sub)) {
+        throw new AppError(
+            "Admins cannot delete their own account",
+            400
+        );
+    }
 
     const deletedUser = await deleteUser(userId);
 

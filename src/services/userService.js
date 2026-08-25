@@ -16,20 +16,27 @@ export const findUserById = async(id) => {
         return result.rows[0] || null;
 };
 
-export const updateUser = async(id,name,email) =>{
-        try{
-                const result = await pool.query(`UPDATE users SET 
-                name = COALESCE($1,name),
-                email = COALESCE($2,email),
+export const updateUser = async (id, name, email) => {
+    try {
+        const result = await pool.query(
+            `UPDATE users
+             SET
+                name = COALESCE($1, name),
+                email = COALESCE($2, email),
                 updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3 RETURNING id, name, email, role, created_at, updated_at`, [name,email,id]);
-        }catch(error){
-                if(error.code === "23505"){
-                        throw new AppError("Email already exists",409);
-                }
-                throw error;
-        }
+             WHERE id = $3
+             RETURNING id, name, email, role, created_at, updated_at`,
+            [name, email, id]
+        );
+
         return result.rows[0] || null;
+    } catch (error) {
+        if (error.code === "23505") {
+            throw new AppError("Email already exists", 409);
+        }
+
+        throw error;
+    }
 };
 
 export const deleteUser = async (id) => {
@@ -118,3 +125,48 @@ export const revokeRefreshToken = async (tokenHash) =>{
 
     return result.rowCount > 0;
 };
+
+export const revokeAllRefreshTokens = async (userId) => {
+    const result = await pool.query(
+        `UPDATE refresh_tokens
+         SET revoked_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1
+           AND revoked_at IS NULL`,
+        [userId]
+    );
+
+    return result.rowCount;
+};
+
+export const revokeRefreshTokenById = async (id) =>{
+    const result = await pool.query(`UPDATE refresh_tokens
+    SET revoked_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+      AND revoked_at IS NULL`,[id]);
+    
+    return result.rowCount > 0;
+};
+
+export const rotateRefreshToken = async (client,oldTokenId,userId,newTokenHash,expiresAt) =>{
+        const revokeResult = await client.query(
+            `UPDATE refresh_tokens
+             SET revoked_at = CURRENT_TIMESTAMP
+             WHERE id = $1
+               AND user_id = $2
+               AND revoked_at IS NULL`,
+            [oldTokenId, userId]
+        );
+
+        if (revokeResult.rowCount === 0) {
+            return false;
+        }
+
+        await client.query(
+            `INSERT INTO refresh_tokens
+                (user_id, token_hash, expires_at)
+             VALUES ($1, $2, $3)`,
+            [userId, newTokenHash, expiresAt]
+        );
+
+        return true;
+    };

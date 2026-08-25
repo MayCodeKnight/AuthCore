@@ -2,27 +2,31 @@ import jwt from "jsonwebtoken";
 import AppError  from "../utils/AppError.js";
 
 
-const authMiddleware = (req,res,next) =>{
+const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
-    if(!authHeader){
+    if (!authHeader) {
         throw new AppError("Authorization required", 401);
     }
 
-    const [scheme,token] = authHeader.split(" ");
+    const [scheme, token] = authHeader.split(" ");
 
-    if(scheme !== "Bearer" || !token){
+    if (scheme !== "Bearer" || !token) {
         throw new AppError("Invalid authorization header", 401);
     }
 
-    try{
-        const verified = jwt.verify(token,process.env.JWT_SECRET);
-        req.user = verified;
+    let verified;
 
-        next();
-    }catch(err){
+    try {
+        verified = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
         throw new AppError("Invalid or expired token", 401);
     }
+
+    req.user = verified;
+    req.token = token;
+
+    next();
 };
 
 export default authMiddleware;

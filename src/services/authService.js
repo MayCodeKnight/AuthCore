@@ -4,7 +4,7 @@ import AppError from "../utils/AppError.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import crypto from "crypto";
-import {saveResetToken,resetUserPassword,findUserByResetToken,saveRefreshToken,findRefreshToken,findUserById,revokeRefreshToken} from "./userService.js";
+import {saveResetToken,resetUserPassword,findUserByResetToken,saveRefreshToken,findRefreshToken,findUserById,revokeRefreshToken,revokeAllRefreshTokens,rotateRefreshToken} from "./userService.js";
 
 dotenv.config();
 
@@ -98,6 +98,7 @@ export const forgotPassword = async (email) =>{
     if(!isSaved){
         throw new AppError("Failed to save reset token",500);
     }
+    console.log("DEV reset token:", resetToken);  // remove resetToken
     return resetToken;
 };
 
@@ -117,6 +118,8 @@ export const resetPassword = async (token,newPassword) =>{
     if(!isUpdated){
         throw new AppError("Failed to reset password",500);
     }
+
+    await revokeAllRefreshTokens(user.id);
 };
 
 
@@ -153,6 +156,12 @@ export const refreshAccessToken = async (refreshToken) =>{
         throw new AppError("Invalid refresh token", 401);
     }
 
+    const {
+        refreshToken: newRefreshToken,
+        tokenHash: newTokenHash,
+        expiresAt
+    } = generateRefreshToken();
+
     const accessToken = jwt.sign(
         {
             sub: user.id,
@@ -163,8 +172,36 @@ export const refreshAccessToken = async (refreshToken) =>{
             expiresIn: "15m"
         }
     );
+
+    const client = await pool.connect();
+    let rotated;
+
+    try {
+        await client.query("BEGIN");
+
+        rotated = await rotateRefreshToken(
+            client,
+            storedToken.id,
+            user.id,
+            newTokenHash,
+            expiresAt
+        );
+
+        if (!rotated) {
+            throw new AppError("Invalid refresh token", 401);
+        }
+
+        await client.query("COMMIT");
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+
     return {
-        accessToken
+        accessToken,
+        refreshToken: newRefreshToken
     };
 };
 
