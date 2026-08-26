@@ -54,7 +54,24 @@ export const loginUser = async (req, res) =>{
         throw new AppError("Email and password are required", 400);
     }
 
-    const token = await loginUserService(email, password);
+     if (typeof email !== "string") {
+        throw new AppError("Email must be a string", 400);
+    }
+
+    if (typeof password !== "string") {
+        throw new AppError("Password must be a string", 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+        throw new AppError("Invalid email format", 400);
+    }
+
+    const token = await loginUserService(
+        normalizedEmail,
+        password
+    );
 
     res.status(200).json(token);
 };
@@ -75,20 +92,36 @@ export const forgotPassword = async (req,res) =>{
     )
 };
 
-export const resetPassword = async (req,res) =>{
-    const {token, newPassword} = req.body;
+export const resetPassword = async (req, res) => {
+    const { token, newPassword } = req.body;
 
-    if(!token || !newPassword){
-        throw new AppError("Token and new password are required", 400);
+    if (!token || !newPassword) {
+        throw new AppError(
+            "Token and new password are required",
+            400
+        );
+    }
+
+    if (typeof token !== "string") {
+        throw new AppError("Token must be a string", 400);
+    }
+
+    if (typeof newPassword !== "string") {
+        throw new AppError("Password must be a string", 400);
+    }
+
+    if (!isValidPassword(newPassword)) {
+        throw new AppError(
+            "Password must be at least 8 characters long",
+            400
+        );
     }
 
     await resetPasswordService(token, newPassword);
 
-    res.status(200).json(
-    {
-      message: "Password has been reset successfully."
-    }
-    )
+    res.status(200).json({
+        message: "Password has been reset successfully."
+    });
 };
 
 export const refreshAccessToken = async (req,res) =>{

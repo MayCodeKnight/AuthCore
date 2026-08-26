@@ -2,14 +2,14 @@ import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import jwt from "jsonwebtoken";
-// import dotenv from "dotenv";
 import crypto from "crypto";
 import {saveResetToken,resetUserPassword,findUserByResetToken,saveRefreshToken,findRefreshToken,findUserById,revokeRefreshToken,revokeAllRefreshTokens,rotateRefreshToken} from "./userService.js";
 
-// dotenv.config();
 
 export const findUserByEmail = async (email) =>{
-    const result = await pool.query(`SELECT * FROM users WHERE email= $1`,[email]);
+    const result = await pool.query(`SELECT id, name, email, password_hash, role, created_at, updated_at
+    FROM users
+    WHERE email = $1`,[email]);
 
     return result.rows[0] || null;
 };
@@ -98,7 +98,7 @@ export const forgotPassword = async (email) =>{
     if(!isSaved){
         throw new AppError("Failed to save reset token",500);
     }
-    console.log("DEV reset token:", resetToken);  // remove resetToken
+    // remove resetToken
     return resetToken;
 };
 

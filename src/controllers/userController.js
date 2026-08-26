@@ -37,14 +37,6 @@ export const updateCurrentUser = async (req, res) => {
             400
         );
     }
-
-    if (providedFields.length === 0) {
-        throw new AppError(
-            "At least one field is required",
-            400
-        );
-    }
-
     const { name, email } = body;
 
     let normalizedName;
