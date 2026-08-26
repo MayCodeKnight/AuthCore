@@ -1,11 +1,6 @@
-import dotenv from "dotenv";
-import { Pool } from "pg";
+import "./env.js";
 
-dotenv.config({
-    path: process.env.NODE_ENV === "test"
-        ? ".env.test"
-        : ".env"
-});
+import { Pool } from "pg";
 
 const pool = new Pool({
     host: process.env.DB_HOST,

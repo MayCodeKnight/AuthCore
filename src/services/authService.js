@@ -98,7 +98,6 @@ export const forgotPassword = async (email) =>{
     if(!isSaved){
         throw new AppError("Failed to save reset token",500);
     }
-    // remove resetToken
     return resetToken;
 };
 

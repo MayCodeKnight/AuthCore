@@ -17,7 +17,13 @@ const adminTestUser = {
     email: "admin-test@example.com",
     password: "Password123"
 };
+const resetTestUser = {
+    name: "Reset Test User",
+    email: "reset-test@example.com",
+    password: "Password123"
+};
 
+let resetTestUserId;
 let loginTestUserId;
 let adminTestUserId;
 
@@ -53,6 +59,14 @@ before(async () => {
          WHERE email = $1`,
         [adminTestUser.email]
     );
+
+    const resetResponse = await request(app)
+        .post("/api/auth/register")
+        .send(resetTestUser);
+
+    assert.equal(resetResponse.statusCode, 201);
+
+    resetTestUserId = resetResponse.body.id;
 });
 
 after(async () => {
@@ -62,6 +76,7 @@ after(async () => {
              'testuser@example.com',
              'login-test@example.com',
              'admin-test@example.com',
+             'reset-test@example.com',
              'duplicate@example.com',
              'role-injection@example.com',
              'casetest@example.com'
@@ -884,7 +899,7 @@ test("POST /api/auth/reset-password - should reset password successfully", async
         [
             hashedToken,
             new Date(Date.now() + 10 * 60 * 1000),
-            adminTestUserId
+            resetTestUserId
         ]
     );
 
@@ -929,8 +944,8 @@ test("POST /api/auth/login - should reject old password after reset", async () =
     const response = await request(app)
         .post("/api/auth/login")
         .send({
-            email: adminTestUser.email,
-            password: adminTestUser.password
+            email: resetTestUser.email,
+            password: resetTestUser.password
         });
 
     assert.equal(response.statusCode, 401);
@@ -940,7 +955,7 @@ test("POST /api/auth/login - should accept new password after reset", async () =
     const response = await request(app)
         .post("/api/auth/login")
         .send({
-            email: adminTestUser.email,
+            email: resetTestUser.email,
             password: "NewPassword123"
         });
 
